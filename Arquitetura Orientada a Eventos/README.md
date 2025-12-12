@@ -105,81 +105,78 @@ Note que nenhum sistema (estoque, financeiro ou suporte ao cliente) está fazend
 
 ---
 
-## Conceitos Chave
+## Conceitos comuns de arquitetura orientada a eventos que você deve conhecer
 
 Existem oito conceitos arquitetônicos chave que precisam ser compreendidos para que a arquitetura orientada a eventos seja bem-sucedida:
 
-1. **Produtor de Eventos** - Sistema que emite eventos
-2. **Consumidor de Eventos** - Sistema que processa eventos
-3. **Corretor de Eventos** - Middleware que gerencia o roteamento de eventos
-4. **Canal de Eventos** - Caminho pelo qual eventos fluem
-5. **Processador de Eventos** - Lógica que reage aos eventos
-6. **Armazenamento de Eventos** - Log persistente de eventos
-7. **Filtro de Eventos** - Determina quais eventos um consumidor recebe
-8. **Transformador de Eventos** - Modifica eventos em trânsito
+### 1. Corretor de Eventos
+
+Um Event Broker é um middleware (que pode ser software, appliance ou SaaS) que roteia eventos entre sistemas usando o padrão de mensagens publicar-assinar. Todos os aplicativos se conectam ao corretor de eventos, que é responsável por aceitar eventos dos remetentes e entregá-los a todos os sistemas assinados para recebê-los.
+
+É necessário um bom design e governança do sistema para garantir que os eventos fiquem onde são necessários e comunicação eficaz entre quem envia eventos e quem precisa responder. É aí que ferramentas — como um portal de eventos — podem ajudar a capturar, comunicar, documentar e governar arquitetura orientada a eventos.
+
+### 2. Portal de Eventos
+
+À medida que as organizações buscam adotar uma arquitetura orientada a eventos, muitas estão tendo dificuldade para documentar o processo de design e entender os impactos das mudanças no sistema. Portais de eventos permitem que as pessoas projetem, criem, descubram, cataloguem, compartilhem, visualizem, protejam e gerenciem eventos e aplicativos orientados a eventos. Os portais de eventos atendem a três públicos principais:
+
+- Arquitetos utilizam um portal de eventos para definir, discutir e revisar eventos, definições de dados e relacionamentos de aplicação.
+- Desenvolvedores usam um portal de eventos para descobrir, entender e reutilizar eventos em diferentes aplicações, linhas de negócio e entre organizações externas.
+- Cientistas de dados utilizam um portal de eventos para entender dados orientados a eventos e descobrir novos insights combinando eventos.
+
+### 3. Tópicos
+
+Os eventos são marcados com metadados que descrevem o evento, chamados de "tópico". Um tópico é uma sequência de texto hierárquica que descreve o que está no evento. Os publishers só precisam saber para qual tema enviar o evento, e o corretor de eventos cuida da entrega para os sistemas que precisam disso. Os usuários do aplicativo podem registrar seu interesse em eventos relacionados a um determinado tema assinando esse tema. Eles podem usar coringas para assinar um grupo de tópicos que tenham sequências de temas semelhantes. Usando a taxonomia de tópicos correta e as assinaturas, você pode cumprir duas regras da arquitetura orientada a eventos:
+
+- Um assinante deve assinar apenas os eventos necessários. A assinatura deve fazer a filtragem, não a lógica de negócios.
+- Um editor deve enviar um evento apenas uma vez, para um tema, e o corretor de eventos deve distribuí-lo para qualquer número de destinatários.
+
+### 4. Malha de Eventos
+
+Uma malha de eventos é criada e habilitada por meio de uma rede de corretores de eventos interconectados. É uma camada de infraestrutura configurável e dinâmica para distribuir eventos entre aplicações desacopladas, serviços em nuvem e dispositivos, roteando dinamicamente eventos para qualquer aplicação, não importa onde essas aplicações estejam implantadas no mundo, em qualquer nuvem, on-premises ou ambiente IoT. Tecnicamente falando, uma malha de eventos é uma rede de corretores de eventos interconectados que compartilham informações de assinatura de tópicos para consumidores e encaminham mensagens entre si para que possam ser repassadas aos assinantes.
+
+### 5. Execução Diferida
+
+Se você está acostumado com APIs baseadas em REST, o conceito de execução diferida pode ser difícil de compreender. A essência da arquitetura orientada a eventos é que, ao publicar um evento, não espera por uma resposta. O corretor de eventos "mantém" (persiste) o evento até que todos os consumidores interessados o aceitem ou recebam, o que pode ser algum tempo depois. Agir sobre o evento original pode então causar a emissão de outros eventos que são igualmente persistentes.
+
+Assim, a arquitetura orientada a eventos leva a cascatas de eventos que são temporal e funcionalmente independentes uns dos outros, mas que ocorrem em sequência. Tudo o que sabemos é que o evento A em algum momento fará algo acontecer. A execução do evento A que consome a lógica não é necessariamente instantânea; sua execução é adiada.
+
+### 6. Consistência Eventual
+
+Seguindo essa ideia de execução adiada, onde você espera que algo aconteça depois, mas não espera por isso, está a ideia de consistência eventual. Como você não sabe quando um evento será consumido e não está esperando confirmação, não pode afirmar com certeza que um dado banco de dados já acompanhou totalmente tudo o que precisa acontecer e não sabe quando isso acontecerá. Se você tem múltiplas entidades com estado (banco de dados, MDM, ERP), não pode dizer que elas terão exatamente o mesmo estado; Você não pode assumir que eles são consistentes. No entanto, para um determinado objeto, sabemos que ele se tornará consistente eventualmente.
+
+### 7. Coreografia
+
+Execução adiada e consistência eventual nos levaram ao conceito de coreografia. Para coordenar uma sequência de ações tomadas por diferentes serviços, você pode optar por introduzir um serviço mestre dedicado a acompanhar todos os outros serviços e agir em caso de erro. Essa abordagem, chamada orquestração, oferece um único ponto de referência ao rastrear um problema, mas também um único ponto de falha e um gargalo.
+
+Com a arquitetura orientada a eventos, os serviços são confiados para entender o que fazer com um evento recebido, frequentemente gerando novos eventos. Isso leva a uma "dança" de serviços individuais fazendo suas próprias coisas mas, quando combinados, produzindo uma resposta implicitamente coordenada, daí o termo coreografia.
+
+### 8. CQRS: Segregação de Responsabilidades por Consulta de Comandos
+
+Uma forma comum de escalar microserviços é separar o serviço responsável por fazer algo (um comando) do serviço responsável por responder consultas. Normalmente, você precisa responder a muito mais consultas do que para uma atualização ou inserção, então separar responsabilidades dessa forma facilita a escalabilidade do serviço de consulta.
+
+Usar arquitetura orientada a eventos facilita isso, já que o tópico deve conter o verbo, então você simplesmente cria mais instâncias do serviço de consulta e ele escuta os tópicos com o verbo de consulta.
+
+---
+
+## Os 6 Princípios da Arquitetura Orientada por Eventos
+
+Aqui estamos, alguns princípios principais da arquitetura orientada a eventos:
+
+1. Use uma rede de corretores de eventos para garantir que as "coisas" certas recebam os eventos certos.
+2. Use os tópicos para garantir que você envie apenas uma vez e receba apenas o que precisa.
+3. Use um portal de eventos para projetar, documentar e governar arquitetura orientada a eventos entre equipes internas e externas.
+4. Use persistência do corretor de eventos para permitir que os consumidores processem eventos quando estiverem prontos (execução diferida).
+5. Lembre-se, isso significa que nem tudo está atualizado (eventual consistência).
+6. Use tópicos novamente para separar diferentes partes de um serviço (consulta de comando, segregação de responsabilidades).
+
+---
+
+## Conclusão
+
+Arquiteturas orientadas a eventos são uma forma de projetar sistemas que tornam suas aplicações mais flexíveis e capazes de crescer sem problemas em toda a sua empresa. Embora esse método possa trazer algumas novas dificuldades e complexidades, é uma boa forma de criar aplicações complicadas permitindo que diferentes grupos trabalhem por conta própria. Alguns serviços em nuvem até oferecem ferramentas gerenciadas que podem ajudar sua organização a construir esse tipo de arquitetura. Este guia explica muitos conceitos sobre arquiteturas orientadas a eventos, sugere algumas melhores práticas e menciona serviços úteis para ajudar sua equipe de desenvolvimento a criar essas arquiteturas. Lembre-se, escolher uma arquitetura orientada a eventos não é apenas sobre tecnologia. Para realmente obter os benefícios, você precisa mudar a forma como pensa sobre desenvolvimento e como sua equipe funciona. Os desenvolvedores precisarão de muita liberdade para escolher a tecnologia e o design certos para sua parte específica da aplicação.
 
 ---
 
 ## Referências
 
-- [The Complete Guide to Event-Driven Architecture](https://medium.com/@seetharamugn/the-complete-guide-to-event-driven-architecture-b25226594227)
-
-Corretor de eventos
-Portal de eventos
-Tópicos
-Malha de eventos
-Execução diferida
-Consistência eventual
-Coreografia
-Consulta de Comando: Segregação de Responsabilidades
-1. Corretor de Eventos
-Um Event Broker é um middleware (que pode ser software, appliance ou SaaS) que roteia eventos entre sistemas usando o padrão de mensagens publicar-assinar. Todos os aplicativos se conectam ao corretor de eventos, que é responsável por aceitar eventos dos remetentes e entregá-los a todos os sistemas assinados para recebê-los.
-
-É necessário um bom design e governança do sistema para garantir que os eventos fiquem onde são necessários e comunicação eficaz entre quem envia eventos e quem precisa responder. É aí que ferramentas — como um portal de eventos — podem ajudar a capturar, comunicar, documentar e governar arquitetura orientada a eventos.
-
-2. Portal de Eventos
-À medida que as organizações buscam adotar uma arquitetura orientada a eventos, muitas estão tendo dificuldade para documentar o processo de design e entender os impactos das mudanças no sistema. Portais de eventos permitem que as pessoas projetem, criem, descubram, catalogem, compartilhem, visualizem, protejam e gerenciem eventos e aplicativos orientados a eventos. Os portais de eventos atendem a três públicos principais:
-
-Arquitetos utilizam um portal de eventos para definir, discutir e revisar eventos, definições de dados e relacionamentos de aplicação.
-Desenvolvedores usam um portal de eventos para descobrir, entender e reutilizar eventos em diferentes aplicações, linhas de negócio e entre organizações externas.
-Cientistas de dados utilizam um portal de eventos para entender dados orientados a eventos e descobrir novos insights combinando eventos.
-3. Tópicos
-Os eventos são marcados com metadados que descrevem o evento, chamados de "tópico". Um tópico é uma sequência de texto hierárquica que descreve o que está no evento. Os publishers só precisam saber para qual tema enviar o evento, e o corretor de eventos cuida da entrega para os sistemas que precisam disso. Os usuários do aplicativo podem registrar seu interesse em eventos relacionados a um determinado tema assinando esse tema. Eles podem usar coringas para assinar um grupo de tópicos que tenham sequências de temas semelhantes. Usando a taxonomia de tópicos correta e as assinaturas, você pode cumprir duas regras da arquitetura orientada a eventos:
-
-Um assinante deve assinar apenas os eventos necessários. A assinatura deve fazer a filtragem, não a lógica de negócios.
-Um editor deve enviar um evento apenas uma vez, para um tema, e o corretor de eventos deve distribuí-lo para qualquer número de destinatários.
-4. Malha de Eventos
-Uma malha de eventos é criada e habilitada por meio de uma rede de corretores de eventos interconectados. É uma camada de infraestrutura configurável e dinâmica para distribuir eventos entre aplicações desacopladas, serviços em nuvem e dispositivos, roteando dinamicamente eventos para qualquer aplicação, não importa onde essas aplicações estejam implantadas no mundo, em qualquer nuvem, on-premises ou ambiente IoT. Tecnicamente falando, uma malha de eventos é uma rede de corretores de eventos interconectados que compartilham informações de assinatura de tópicos para consumidores e encaminham mensagens entre si para que possam ser repassadas aos assinantes.
-
-5. Execução Diferida
-Se você está acostumado com APIs baseadas em REST, o conceito de execução diferida pode ser difícil de compreender. A essência da arquitetura orientada a eventos é que, ao publicar um evento, não espera por uma resposta. O corretor de eventos "mantém" (persiste) o evento até que todos os consumidores interessados o aceitem ou recebam, o que pode ser algum tempo depois. Agir sobre o evento original pode então causar a emissão de outros eventos que são igualmente persistentes.
-
-Assim, a arquitetura orientada a eventos leva a cascatas de eventos que são temporal e funcionalmente independentes uns dos outros, mas que ocorrem em sequência. Tudo o que sabemos é que o evento A em algum momento fará algo acontecer. A execução do evento A que consome a lógica não é necessariamente instantânea; sua execução é adiada.
-
-6. Consistência Eventual
-Seguindo essa ideia de execução adiada, onde você espera que algo aconteça depois, mas não espera por isso, está a ideia de consistência eventual. Como você não sabe quando um evento será consumido e não está esperando confirmação, não pode afirmar com certeza que um dado banco de dados já acompanhou totalmente tudo o que precisa acontecer e não sabe quando isso acontecerá. Se você tem múltiplas entidades com estado (banco de dados, MDM, ERP), não pode dizer que elas terão exatamente o mesmo estado; Você não pode assumir que eles são consistentes. No entanto, para um determinado objeto, sabemos que ele se tornará consistente eventualmente.
-
-7. Coreografia
-Execução adiada e consistência eventual nos levaram ao conceito de coreografia. Para coordenar uma sequência de ações tomadas por diferentes serviços, você pode optar por introduzir um serviço mestre dedicado a acompanhar todos os outros serviços e agir em caso de erro. Essa abordagem, chamada orquestração, oferece um único ponto de referência ao rastrear um problema, mas também um único ponto de falha e um gargalo.
-
-Com a arquitetura orientada a eventos, os serviços são confiados para entender o que fazer com um evento recebido, frequentemente gerando novos eventos. Isso leva a uma "dança" de serviços individuais fazendo suas próprias coisas mas, quando combinados, produzindo uma resposta implicitamente coordenada, daí o termo coreografia.
-
-8. CQRS: Segregação de Responsabilidades por Consulta de Comandos
-Uma forma comum de escalar microserviços é separar o serviço responsável por fazer algo (um comando) do serviço responsável por responder consultas. Normalmente, você precisa responder a muito mais consultas do que para uma atualização ou inserção, então separar responsabilidades dessa forma facilita a escalabilidade do serviço de consulta.
-
-Usar arquitetura orientada a eventos facilita isso, já que o tópico deve conter o verbo, então você simplesmente cria mais instâncias do serviço de consulta e ele escuta os tópicos com o verbo de consulta.
-
-Os 6 Princípios da Arquitetura Orientada por Eventos
-Aqui estamos, alguns princípios principais da arquitetura orientada a eventos:
-
-Use uma rede de corretores de eventos para garantir que as "coisas" certas recebam os eventos certos.
-Use os tópicos para garantir que você envie apenas uma vez e receba apenas o que precisa.
-Use um portal de eventos para projetar, documentar e governar arquitetura orientada a eventos entre equipes internas e externas.
-Use persistência do corretor de eventos para permitir que os consumidores processem eventos quando estiverem prontos (execução diferida).
-Lembre-se, isso significa que nem tudo está atualizado (eventual consistência).
-Use tópicos novamente para separar diferentes partes de um serviço (consulta de comando, segregação de responsabilidades).
-Conclusão
-Arquiteturas orientadas a eventos são uma forma de projetar sistemas que tornam suas aplicações mais flexíveis e capazes de crescer sem problemas em toda a sua empresa. Embora esse método possa trazer algumas novas dificuldades e complexidades, é uma boa forma de criar aplicações complicadas permitindo que diferentes grupos trabalhem por conta própria. Alguns serviços em nuvem até oferecem ferramentas gerenciadas que podem ajudar sua organização a construir esse tipo de arquitetura. Este guia explica muitos conceitos sobre arquiteturas orientadas a eventos, sugere algumas melhores práticas e menciona serviços úteis para ajudar sua equipe de desenvolvimento a criar essas arquiteturas. Lembre-se, escolher uma arquitetura orientada a eventos não é apenas sobre tecnologia. Para realmente obter os benefícios, você precisa mudar a forma como pensa sobre desenvolvimento e como sua equipe funciona. Os desenvolvedores precisarão de muita liberdade para escolher a tecnologia e o design certos para sua parte específica da aplicação.
-
-# Referencias:
-  - https://medium.com/@seetharamugn/the-complete-guide-to-event-driven-architecture-b25226594227
+- https://medium.com/@seetharamugn/the-complete-guide-to-event-driven-architecture-b25226594227
